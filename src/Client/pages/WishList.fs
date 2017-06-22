@@ -35,7 +35,7 @@ let getWishList token =
     }
 
 let loadWishListCmd token = 
-    Cmd.ofPromise getWishList token FetchedWishList FetchError
+    Cmd.ofPromise getWishList token FetchedWishList WishListMsg.FetchError
 
 let postWishList (token,wishList) =
     promise {        
@@ -52,7 +52,7 @@ let postWishList (token,wishList) =
     }
 
 let postWishListCmd (token,wishList) = 
-    Cmd.ofPromise postWishList (token,wishList) FetchedWishList FetchError
+    Cmd.ofPromise postWishList (token,wishList) FetchedWishList WishListMsg.FetchError
 
 let init (user:UserData) = 
     { WishList = WishList.New user.UserName
@@ -90,7 +90,7 @@ let update (msg:WishListMsg) model : Model*Cmd<WishListMsg> =
                 TitleErrorText = Validation.verifyBookTitle model.NewBook.Title
                 AuthorsErrorText = Validation.verifyBookAuthors model.NewBook.Authors
                 LinkErrorText = Validation.verifyBookLink model.NewBook.Link }, Cmd.none
-    | FetchError _ -> 
+    | WishListMsg.FetchError _ -> 
         model, Cmd.none
 
 let newBookForm (model:Model) dispatch =

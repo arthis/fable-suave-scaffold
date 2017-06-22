@@ -98,7 +98,7 @@ let view model (dispatch: AppMsg -> unit) =
 
     | LoggedOut ->
         div [ClassName "signInBox" ] [
-          h3 [ ClassName "text-center" ] [ str "Log in with 'test' / 'test'."]
+          h3 [ ClassName "text-center" ] [ str "Log in with."]
            
           div [ ClassName showErrorClass ] [
                   div [ ClassName "alert alert-danger" ] [ str model.ErrorMsg ]

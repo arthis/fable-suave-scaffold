@@ -22,6 +22,16 @@ type WishListMsg =
   | LinkChanged of string
   | FetchError of exn
 
+/// The different messages processed when interacting with the tentacle list
+type TentacleListMsg =
+  | LoadForUser of string
+  | FetchedTentacleList of TentacleList
+  | RemoveTentacle of Tentacle
+  | AddTentacle
+  | FriendlyNameChanged of string
+  | NameChanged of string
+  | FetchError of exn
+
 /// The different messages processed by the application
 type AppMsg = 
   | LoggedIn
@@ -30,6 +40,7 @@ type AppMsg =
   | OpenLogIn
   | LoginMsg of LoginMsg
   | WishListMsg of WishListMsg
+  | TentacleListMsg of TentacleListMsg
   | Logout
 
 /// The user data sent with every message.
@@ -42,9 +53,11 @@ type Page =
   | Home 
   | Login
   | WishList
+  | TentacleList
 
 let toHash =
   function
   | Home -> "#home"
   | Login -> "#login"
   | WishList -> "#wishlist"
+  | TentacleList -> "#tentaclelist"

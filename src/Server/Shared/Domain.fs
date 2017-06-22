@@ -11,6 +11,8 @@ type Login =
     { UserName : string
       Password : string }
 
+
+
 /// The data for each book in /api/wishlist
 type Book = 
     { Title: string
@@ -33,6 +35,118 @@ type WishList =
         { UserName = userName
           Books = [] }
 
+type Artifact =
+    {
+        filePath : string;
+        url : PrintfFormat<(int -> string),unit,string,string,int>;
+        login : string;
+        password : string;
+    }
+
+type Site =
+    {
+        name : string;
+        url : string;
+        port : int;
+        physicalPath : string;
+    }
+
+type TentacleStepScript = 
+    {
+        name : string;
+        script : string;
+    }
+
+type DBName = | DBName of string
+
+type SqlConnection = 
+    {
+        serverName :string;
+        login:string;
+        password:string;
+    }
+
+type SqlFile = 
+    {
+        folder : string
+        files : string []
+    }
+
+type InstallDBScript = 
+    {
+        sqlConnection : SqlConnection
+        dbName: DBName;
+        dataPath : string;
+        logPath: string;
+        sqlFiles : SqlFile list
+    }
+
+type UpdateDBScript = 
+    {
+        sqlConnection : SqlConnection
+        script : string;
+    }
+
+type DetachDBScript = 
+    {
+        sqlConnection : SqlConnection
+        dbName : DBName;
+    }
+
+type AttachDBScript = 
+    {
+        sqlConnection : SqlConnection
+        dbName : DBName;
+        dataFilePath : string;
+        logFilePath: string;
+    }
+
+type UnzipStep = 
+    {
+        archive :string;
+        target :string;
+    }
+type MoveStep = 
+    {
+        sourceFolder : string;
+        targetFolder : string;
+    }
+
+type DeploymentStep =
+    | Script of TentacleStepScript
+    | CreateNewSite of Site
+    | Move of MoveStep
+    | Unzip of UnzipStep
+    | HttpDownlad of Artifact
+    | SFtpDownlad of Artifact
+    | InstallDB of InstallDBScript
+    | UpdateDB of UpdateDBScript
+    | DetachDB of DetachDBScript
+    | AttachDB of AttachDBScript
+    | StartService of string
+    | StopService of string
+    | SiteMaintenanceOn of string
+    | SiteMaintenanceOff of string          
+
+type Tentacle =
+    {
+        Id : Guid;
+        Name: string;
+        FriendlyName : string;
+    }
+    static member empty = 
+        { Id = Guid.NewGuid()
+          Name = ""
+          FriendlyName = "" }
+
+type TentacleList =
+    {
+        UserName : string
+        Tentacles : Tentacle list
+    }
+    static member New userName = 
+        { UserName = userName
+          Tentacles = [] }
 
 // Model validation functions.  Write your validation functions once, for server and client!
 module Validation =
@@ -56,3 +170,20 @@ module Validation =
 
     let verifyWishList wishList =
         wishList.Books |> List.forall verifyBook
+
+
+    
+    let verifyTentacleName name =
+        if String.IsNullOrWhiteSpace name then Some "No name was entered" else
+        None
+
+    let verifyTentacleFriendlyName friendlyName =
+        if String.IsNullOrWhiteSpace friendlyName then Some "No friendlyName was entered" else
+        None
+
+    let verifyTentacle tentacle =
+        verifyTentacleName tentacle.Name = None &&
+        verifyTentacleFriendlyName tentacle.FriendlyName = None 
+
+    let verifyTentacleList tentacleList =
+        tentacleList.Tentacles |> List.forall verifyTentacle    

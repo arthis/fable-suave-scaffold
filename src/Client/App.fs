@@ -19,6 +19,7 @@ type SubModel =
   | NoSubModel
   | LoginModel of Login.Model
   | WishListModel of WishList.Model
+  | TentacleListModel of TentacleList.Model
 
 type Model =
   { Page : Page
@@ -31,7 +32,8 @@ let pageParser : Parser<Page->_,_> =
     oneOf
         [ map Home (s "home")
           map Page.Login (s "login")
-          map WishList (s "wishlist") ]
+          map WishList (s "wishlist")
+          map TentacleList (s "tentaclelist") ]
 
 let urlUpdate (result:Page option) model =
     match result with
@@ -51,6 +53,13 @@ let urlUpdate (result:Page option) model =
         | None ->
             model, Cmd.ofMsg Logout
 
+    | Some (Page.TentacleList as page) ->
+        match model.Menu.User with
+        | Some user ->
+            let m,cmd = TentacleList.init user
+            { model with Page = page; SubModel = TentacleListModel m }, Cmd.map TentacleListMsg cmd
+        | None ->
+            model, Cmd.ofMsg Logout
     | Some (Home as page) ->
         { model with Page = page; Menu = { model.Menu with query = "" } }, []
 
@@ -105,6 +114,14 @@ let update msg model =
 
     | WishListMsg msg, _ -> model, Cmd.none
 
+    | TentacleListMsg msg, TentacleListModel m ->
+        let m,cmd = TentacleList.update msg m
+        let cmd = Cmd.map TentacleListMsg cmd
+        { model with
+            SubModel = TentacleListModel m }, cmd
+    
+    | TentacleListMsg msg, _ -> model, Cmd.none
+
     | AppMsg.LoggedIn, _ ->
         let nextPage = Page.WishList
         let m,cmd = urlUpdate (Some nextPage) model
@@ -134,9 +151,13 @@ open Client.Style
 let viewPage model dispatch =
     match model.Page with
     | Page.Home ->
-        [ words 60 "Welcome!"
-          a [ Href "http://fable.io" ] [ words 20 "Learn Fable at fable.io" ] ]
-
+        [ words 60 "Octopussy"
+          img [ 
+                Src "img/octopussy.jpg"
+                Width <| U2.Case1(float 600)
+          ]
+          words 18 "...aims to deliver kitten all over the world..."
+        ]
     | Page.Login ->
         match model.SubModel with
         | LoginModel m ->
@@ -147,6 +168,12 @@ let viewPage model dispatch =
         match model.SubModel with
         | WishListModel m ->
             [ div [ ] [ lazyView2 WishList.view m dispatch ]]
+        | _ -> [ ]
+    
+    | Page.TentacleList ->
+        match model.SubModel with
+        | TentacleListModel m ->
+            [ div [ ] [ lazyView2 TentacleList.view m dispatch ]]
         | _ -> [ ]
 
 /// Constructs the view for the application given the model.
