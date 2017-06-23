@@ -27,12 +27,17 @@ let start clientPath port =
                 path "/" >=> Files.browseFileHome "index.html"
                 pathRegex @"/(public|js|css|Images)/(.*)\.(css|png|gif|jpg|js|map)" >=> Files.browseHome
 
-                path "/api/wishlist/" >=> WishList.getWishList ]
+                path "/api/wishlist/" >=> WishList.getWishList
+                
+                path "/api/tentaclelist/" >=> TentacleList.getTentacleList
+                ]
 
             POST >=> choose [
                 path "/api/users/login" >=> Auth.login
 
                 path "/api/wishlist/" >=> WishList.postWishList
+
+                path "/api/tentaclelist/" >=> TentacleList.postTentacleList
             ]
 
             NOT_FOUND "Page not found."

@@ -28,6 +28,7 @@ type TentacleListMsg =
   | FetchedTentacleList of TentacleList
   | RemoveTentacle of Tentacle
   | AddTentacle
+  | TentacleAdded of Tentacle
   | FriendlyNameChanged of string
   | NameChanged of string
   | FetchError of exn

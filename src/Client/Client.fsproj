@@ -4,6 +4,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Server/Shared/Domain.fs" />
+    <Compile Include="../Server/Shared/Tentacles.fs" />
+    <Compile Include="../Server/Shared/Validation.fs" />
     <Compile Include="Messages.fs" />
     <Compile Include="Style.fs" />
     <Compile Include="Utils.fs" />

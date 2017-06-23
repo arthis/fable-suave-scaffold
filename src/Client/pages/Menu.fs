@@ -18,7 +18,7 @@ type Model = {
     User : UserData option
     query : string
 }
-
+ 
 let init() = { User = Utils.load "user"; query = "" },Cmd.none
 
 let view (model:Model) dispatch =
@@ -26,6 +26,8 @@ let view (model:Model) dispatch =
           yield viewLink Home "Home"
           if model.User <> None then 
               yield viewLink Page.WishList "Wishlist"
+          if model.User <> None then 
+              yield viewLink Page.TentacleList "Tentacles"
           if model.User = None then 
               yield viewLink (Login) "Login" 
           else 

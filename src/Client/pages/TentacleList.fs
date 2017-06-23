@@ -34,7 +34,7 @@ let getTentacleList token =
             [ Fetch.requestHeaders [
                 HttpRequestHeaders.Authorization ("Bearer " + token) ]]
 
-        return! Fable.PowerPack.Fetch.fetchAs<WishList> url props
+        return! Fable.PowerPack.Fetch.fetchAs<TentacleList> url props
     }
 
 let loadTentacleListCmd token = 
@@ -51,11 +51,28 @@ let postTentacleList (token,tentacleList) =
                 HttpRequestHeaders.ContentType "application/json" ]
               RequestProperties.Body !^body ]
 
-        return! Fable.PowerPack.Fetch.fetchAs<WishList> url props
+        return! Fable.PowerPack.Fetch.fetchAs<TentacleList> url props
     }
 
-let postWishListCmd (token,tentacleList) = 
+let postAddTentacle (token,tentacle) =
+    promise {        
+        let url = "/api/tentacles/add"
+        let body = toJson tentacle
+        let props = 
+            [ RequestProperties.Method HttpMethod.POST
+              Fetch.requestHeaders [
+                HttpRequestHeaders.Authorization ("Bearer " + token)
+                HttpRequestHeaders.ContentType "application/json" ]
+              RequestProperties.Body !^body ]
+
+        return! Fable.PowerPack.Fetch.fetchAs<string> url props
+    }    
+
+let postTentacleListCmd (token,tentacleList) = 
     Cmd.ofPromise postTentacleList (token,tentacleList) FetchedTentacleList FetchError
+
+let postAddTentacleCmd    (token,tentacle) = 
+    Cmd.ofPromise postAddTentacle (token,tentacle)  TentacleAdded FetchError
 
 let init (user:UserData) = 
     { TentacleList = TentacleList.New user.UserName
@@ -80,16 +97,18 @@ let update (msg:TentacleListMsg) model : Model*Cmd<TentacleListMsg> =
         { model with NewTentacle = { model.NewTentacle with FriendlyName = friendlyName }; NameErrorText = Validation.verifyTentacleFriendlyName friendlyName }, Cmd.none    
     | RemoveTentacle tentacle -> 
         let tentacleList = { model.TentacleList with Tentacles = model.TentacleList.Tentacles |> List.filter ((<>) tentacle) }
-        { model with TentacleList = tentacleList}, postWishListCmd(model.Token,tentacleList)
+        { model with TentacleList = tentacleList}, postTentacleListCmd(model.Token,tentacleList)
     | AddTentacle ->
         if Validation.verifyTentacle model.NewTentacle then
             let tentacleList = { model.TentacleList with Tentacles = (model.NewTentacle :: model.TentacleList.Tentacles) |> List.sortBy (fun b -> b.Name) }
-            { model with TentacleList = tentacleList; NewTentacle = Tentacle.empty; NewTentacleId = Guid.NewGuid() }, postWishListCmd(model.Token,tentacleList)
+            { model with TentacleList = tentacleList; NewTentacle = Tentacle.empty; NewTentacleId = Guid.NewGuid() }, postAddTentacleCmd(model.Token,tentacleList)
         else
             { model with  
                 NameErrorText = Validation.verifyTentacleName model.NewTentacle.Name
                 FriendlyNameErrorText = Validation.verifyTentacleFriendlyName model.NewTentacle.FriendlyName
             }, Cmd.none
+    | TentacleAdded tentacle ->
+        model, Cmd.none
     | FetchError _ -> 
         model, Cmd.none      
 
