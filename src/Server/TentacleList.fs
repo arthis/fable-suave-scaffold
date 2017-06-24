@@ -17,32 +17,6 @@ open Suave.Logging.Message
 let logger = Log.create "FableSample"
 
 
-let tentaclesActor = MailboxProcessor.Start(fun inbox-> 
-
-    // the message processing function
-    let rec messageLoop() = async{
-        
-        // read a message
-        let! msg = inbox.Receive()
-
-        match msg with
-        | RemoveTentacle t -> ()
-        | AddTentacle t -> ()
-        | UpdateTentacleName (i,n) -> ()
-        | UpdateTentacleFriendlyName (i, nf) -> ()
-        
-        // process a message
-        // printfn "message is: %s" msg
-
-        // loop to top
-        return! messageLoop()  
-        }
-
-    // start the loop 
-    messageLoop() 
-    )
-
-
 /// The default initial data 
 let defaultTentacleList machineName : TentacleList =
     {
@@ -58,14 +32,17 @@ let defaultTentacleList machineName : TentacleList =
               FriendlyName = "BrunswickPreProd"}]
     }
 
+
+
+
 //  file name used to store the data for a specific user
 let jsonFileName = "./temp/db/tentacles.json" 
 
 /// Query the database
-let getWishListFromDB userName =
+let getTentacleListFromDB machineName =
     let fi = FileInfo(jsonFileName)
     if not fi.Exists then
-        defaultTentacleList userName
+        defaultTentacleList machineName
     else
         File.ReadAllText(fi.FullName)
         |> FableJson.ofJson<TentacleList>
@@ -80,11 +57,54 @@ let saveTentacleListToDB (tentacleList:TentacleList) =
     with exn ->
         logger.error (eventX "Save failed with exception" >> addExn exn)
 
+
+let tentaclesActor tentacleList = MailboxProcessor.Start(fun inbox-> 
+
+    // the message processing function
+    let rec messageLoop(state) = async{
+        
+        // read a message
+        let! msg = inbox.Receive()
+ 
+        let newState = 
+            match msg with
+            | RemoveTentacle t -> 
+                let newTentacles = 
+                    state.Tentacles 
+                    |> Seq.filter (fun x -> x.Id<>t.Id)
+                    |> Seq.toList
+                { state with Tentacles = newTentacles  }
+            | AddTentacle t -> 
+                { state with Tentacles = t::state.Tentacles }
+            | UpdateTentacleName (i,n) ->  state
+                // let t = state.Tentacles |> Seq.filter |> fun x -> x.Id<>i   
+                // let updatedTentacle
+            | UpdateTentacleFriendlyName (i, nf) -> state
+        
+        saveTentacleListToDB newState
+        // process a message
+        // printfn "message is: %s" msg
+
+        // loop to top
+        return! messageLoop(newState)  
+        }
+
+    // start the loop 
+    messageLoop(tentacleList)  
+    )
+
+let actor = tentaclesActor <| getTentacleListFromDB "local"
+
+
+
+
+    
+
 /// Handle the GET on /api/tentaclelist
 let getTentacleList (ctx: HttpContext) =
     Auth.useToken ctx (fun token -> async {
         try
-            let tentacleList = getWishListFromDB token.UserName
+            let tentacleList = getTentacleListFromDB token.UserName
             return! Successful.OK (FableJson.toJson tentacleList) ctx
         with exn ->
             logger.error (eventX "SERVICE_UNAVAILABLE" >> addExn exn)
@@ -111,55 +131,42 @@ let postTentacleList (ctx: HttpContext) =
     })    
 
 /// Handle the POST on /api/tentacles/remove
-let postRemoveTentacle (ctx:HttpContext) = 
+let postActionTentacle (fmap: string -> TentacleCommand) (ctx:HttpContext) = 
     Auth.useToken ctx (fun token -> async {
         
         ctx.request.rawForm
         |> System.Text.Encoding.UTF8.GetString
-        |> FableJson.ofJson<Tentacle>
-        |> RemoveTentacle
-        |> tentaclesActor.Post
+        |> fmap
+        |> actor.Post
 
         return! Successful.OK "OK" ctx
     })    
+
+/// Handle the POST on /api/tentacles/remove
+let postRemoveTentacle  = 
+    FableJson.ofJson<Tentacle> >> RemoveTentacle
+    |> postActionTentacle 
+    
 
 
 /// Handle the POST on /api/tentacles/add
-let postAddTentacle (ctx:HttpContext) = 
-    Auth.useToken ctx (fun token -> async {
+let postAddTentacle = 
+    FableJson.ofJson<Tentacle> >> AddTentacle
+    |> postActionTentacle
         
-        ctx.request.rawForm
-        |> System.Text.Encoding.UTF8.GetString
-        |> FableJson.ofJson<Tentacle>
-        |> AddTentacle
-        |> tentaclesActor.Post
-
-        return! Successful.OK "OK" ctx
-    })    
+    
 
 /// Handle the POST on /api/tentacles/updateTentacleName
-let postUpdateTentacleName (ctx:HttpContext) = 
-    Auth.useToken ctx (fun token -> async {
-        
-        ctx.request.rawForm
-        |> System.Text.Encoding.UTF8.GetString
-        |> FableJson.ofJson<Guid*string>
-        |> UpdateTentacleName
-        |> tentaclesActor.Post
+let postUpdateTentacleName = 
+    FableJson.ofJson<Guid*string> >> UpdateTentacleName
+    |> postActionTentacle
 
-        return! Successful.OK "OK" ctx
-    })        
+    
 
 /// Handle the POST on /api/tentacles/updateTentacleFriendlyName
-let postUpdateTentacleFriendlyName (ctx:HttpContext) = 
-    Auth.useToken ctx (fun token -> async {
-        
-        ctx.request.rawForm
-        |> System.Text.Encoding.UTF8.GetString
-        |> FableJson.ofJson<Guid*string>
-        |> UpdateTentacleFriendlyName
-        |> tentaclesActor.Post
+let postUpdateTentacleFriendlyName  = 
+    FableJson.ofJson<Guid*string> >> UpdateTentacleFriendlyName
+    |> postActionTentacle
 
-        return! Successful.OK "OK" ctx
-    })            
+    
 

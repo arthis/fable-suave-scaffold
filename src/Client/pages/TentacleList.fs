@@ -68,11 +68,28 @@ let postAddTentacle (token,tentacle) =
         return! Fable.PowerPack.Fetch.fetchAs<string> url props
     }    
 
+let postRemoveTentacle (token,tentacle) =
+    promise {        
+        let url = "/api/tentacles/remove"
+        let body = toJson tentacle
+        let props = 
+            [ RequestProperties.Method HttpMethod.POST
+              Fetch.requestHeaders [
+                HttpRequestHeaders.Authorization ("Bearer " + token)
+                HttpRequestHeaders.ContentType "application/json" ]
+              RequestProperties.Body !^body ]
+
+        return! Fable.PowerPack.Fetch.fetchAs<string> url props
+    }    
+
 let postTentacleListCmd (token,tentacleList) = 
     Cmd.ofPromise postTentacleList (token,tentacleList) FetchedTentacleList FetchError
 
 let postAddTentacleCmd    (token,tentacle) = 
     Cmd.ofPromise postAddTentacle (token,tentacle)  TentacleAdded FetchError
+
+let postRemoveTentacleCmd    (token,tentacle) = 
+    Cmd.ofPromise postRemoveTentacle (token,tentacle)  TentacleRemoved FetchError
 
 let init (user:UserData) = 
     { TentacleList = TentacleList.New user.UserName
@@ -94,14 +111,16 @@ let update (msg:TentacleListMsg) model : Model*Cmd<TentacleListMsg> =
     | NameChanged name -> 
         { model with NewTentacle = { model.NewTentacle with Name = name }; NameErrorText = Validation.verifyTentacleName name }, Cmd.none
     | FriendlyNameChanged friendlyName -> 
-        { model with NewTentacle = { model.NewTentacle with FriendlyName = friendlyName }; NameErrorText = Validation.verifyTentacleFriendlyName friendlyName }, Cmd.none    
+        { model with NewTentacle = { model.NewTentacle with FriendlyName = friendlyName }; FriendlyNameErrorText = Validation.verifyTentacleFriendlyName friendlyName }, Cmd.none    
     | RemoveTentacle tentacle -> 
         let tentacleList = { model.TentacleList with Tentacles = model.TentacleList.Tentacles |> List.filter ((<>) tentacle) }
-        { model with TentacleList = tentacleList}, postTentacleListCmd(model.Token,tentacleList)
+        { model with TentacleList = tentacleList}, postRemoveTentacleCmd(model.Token,tentacle)
+    | TentacleRemoved tentacle ->
+        model, Cmd.none    
     | AddTentacle ->
         if Validation.verifyTentacle model.NewTentacle then
             let tentacleList = { model.TentacleList with Tentacles = (model.NewTentacle :: model.TentacleList.Tentacles) |> List.sortBy (fun b -> b.Name) }
-            { model with TentacleList = tentacleList; NewTentacle = Tentacle.empty; NewTentacleId = Guid.NewGuid() }, postAddTentacleCmd(model.Token,tentacleList)
+            { model with TentacleList = tentacleList; NewTentacle = Tentacle.empty; NewTentacleId = Guid.NewGuid() }, postAddTentacleCmd(model.Token,model.NewTentacle)
         else
             { model with  
                 NameErrorText = Validation.verifyTentacleName model.NewTentacle.Name
@@ -112,31 +131,25 @@ let update (msg:TentacleListMsg) model : Model*Cmd<TentacleListMsg> =
     | FetchError _ -> 
         model, Cmd.none      
 
-
-
 let newTentacleForm (model:Model) dispatch =
     let buttonActive = if String.IsNullOrEmpty model.NewTentacle.Name ||
                           String.IsNullOrEmpty model.NewTentacle.FriendlyName 
                         then "btn-disabled"
                         else "btn-primary"
     
-    let nameStatus = if String.IsNullOrEmpty model.NewTentacle.Name then "" else "has-success"
-
-    let friendlyNameStatus = if String.IsNullOrEmpty model.NewTentacle.FriendlyName then "" else "has-success"
-
 
     div [] [
         h4 [] [str "New Book"]
         div [ClassName "container"] [
             div [ClassName "row"] [
                 div [ClassName "col-md-8"] [
-                    div [ClassName ("form-group has-feedback" + nameStatus)] [
+                    div [ClassName ("form-group has-feedback")] [
                         yield div [ClassName "input-group"] [
                              yield span [ClassName "input-group-addon"] [span [ClassName "glyphicon glyphicon-pencil"] [] ]
                              yield input [
                                      Key ("Name_" + model.NewTentacleId.ToString())
                                      HTMLAttr.Type "text"
-                                     Name "Title"
+                                     Name "Name"
                                      DefaultValue (U2.Case1 model.NewTentacle.Name)
                                      ClassName "form-control"
                                      Placeholder "Please insert tentacle name"
@@ -150,13 +163,13 @@ let newTentacleForm (model:Model) dispatch =
                         | Some e -> yield p [ClassName "text-danger"][str e]
                         | _ -> ()
                     ]
-                    div [ClassName ("form-group has-feedback" + friendlyNameStatus) ] [
+                    div [ClassName ("form-group has-feedback") ] [
                          yield div [ClassName "input-group"][
                              yield span [ClassName "input-group-addon"] [span [ClassName "glyphicon glyphicon-user"] [] ]
                              yield input [ 
                                      Key ("FriendlyName_" + model.NewTentacleId.ToString())
                                      HTMLAttr.Type "text"
-                                     Name "Author"
+                                     Name "FriendlyName"
                                      DefaultValue (U2.Case1 model.NewTentacle.FriendlyName)
                                      ClassName "form-control"
                                      Placeholder "Please insert friendly name"

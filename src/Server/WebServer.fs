@@ -38,6 +38,14 @@ let start clientPath port =
                 path "/api/wishlist/" >=> WishList.postWishList
 
                 path "/api/tentaclelist/" >=> TentacleList.postTentacleList
+
+                path "/api/tentacles/add" >=> TentacleList.postAddTentacle
+
+                path "/api/tentacles/remove" >=> TentacleList.postRemoveTentacle
+
+                path "/api/tentacles/updateTentacleName" >=> TentacleList.postUpdateTentacleName
+
+                path "/api/tentacles/updateTentacleFriendlyName" >=> TentacleList.postUpdateTentacleFriendlyName
             ]
 
             NOT_FOUND "Page not found."
